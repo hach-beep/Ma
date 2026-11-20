@@ -16,6 +16,7 @@ import {
   Navigation,
   Phone,
   Search,
+  ShieldCheck,
   Sparkles,
   Star,
   Ticket,
@@ -40,6 +41,7 @@ import { StationImage } from './StationImage';
 interface DriverViewProps {
   stations: Station[];
   user: User | null;
+  isAdmin: boolean;
   profile: UserProfile | null;
   bookings: Booking[];
   favoriteIds: Set<string>;
@@ -48,6 +50,7 @@ interface DriverViewProps {
   onTabChange: (tab: DriverTab) => void;
   onSignIn: () => Promise<void>;
   onSignOut: () => Promise<void>;
+  onOpenStaffPortal: () => void;
   onToggleFavorite: (station: Station) => Promise<void>;
   onCreateBooking: (params: {
     station: Station;
@@ -75,6 +78,7 @@ const TIME_SLOTS = ['الآن (طابور فوري)', '09:00', '10:00', '11:00',
 export const DriverView: React.FC<DriverViewProps> = ({
   stations,
   user,
+  isAdmin,
   profile,
   bookings,
   favoriteIds,
@@ -83,6 +87,7 @@ export const DriverView: React.FC<DriverViewProps> = ({
   onTabChange,
   onSignIn,
   onSignOut,
+  onOpenStaffPortal,
   onToggleFavorite,
   onCreateBooking,
   onUpdateBookingStatus,
@@ -1120,6 +1125,22 @@ export const DriverView: React.FC<DriverViewProps> = ({
               >
                 {savingProfile ? 'جاري الحفظ...' : 'حفظ التغييرات'}
               </button>
+
+              {isAdmin && (
+                <div className="pt-5 mt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <ShieldCheck className="w-4 h-4 text-[#2563EB]" />
+                    <span>حسابك يملك صلاحية إدارة المحطة</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenStaffPortal}
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-[#EEF4FF] text-[#132B5E] text-xs font-bold hover:bg-[#DBEAFE] transition-colors"
+                  >
+                    الانتقال إلى بوابة موظف المحطة (/staff)
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>

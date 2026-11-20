@@ -49,6 +49,7 @@ import {
 import { DriverView } from './components/DriverView';
 import { StaffDashboard } from './components/StaffDashboard';
 import { StationDisplay } from './components/StationDisplay';
+import { Lock, LogIn, ShieldAlert } from 'lucide-react';
 
 function toMillis(ts: unknown): number {
   if (!ts) return 0;
@@ -59,9 +60,42 @@ function toMillis(ts: unknown): number {
   return 0;
 }
 
+function checkIsStaffRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.pathname === '/staff' ||
+    window.location.pathname.startsWith('/staff/') ||
+    window.location.hash === '#staff'
+  );
+}
+
 export default function App() {
-  const [mode, setMode] = useState<AppMode>('driver');
+  const [isStaffPortal, setIsStaffPortal] = useState<boolean>(() => checkIsStaffRoute());
+  const [mode, setMode] = useState<Exclude<AppMode, 'staff'>>('driver');
   const [driverTab, setDriverTab] = useState<DriverTab>('map');
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setIsStaffPortal(checkIsStaffRoute());
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('hashchange', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('hashchange', handleRouteChange);
+    };
+  }, []);
+
+  const navigateToStaffPortal = useCallback(() => {
+    window.history.pushState({}, '', '/staff');
+    setIsStaffPortal(true);
+  }, []);
+
+  const navigateToDriverApp = useCallback(() => {
+    window.history.pushState({}, '', '/');
+    setIsStaffPortal(false);
+    setMode('driver');
+  }, []);
 
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -589,9 +623,124 @@ export default function App() {
     }
   };
 
+  // Dedicated Staff Portal (/staff or #staff) — completely separated from customer app
+  if (isStaffPortal) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-[#F4F7FC] text-[#0F172A]">
+        <header className="sticky top-0 z-30 bg-[#0B1C3E] text-white border-b border-[#1E3A8A]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
+            <a
+              href="/staff"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToStaffPortal();
+              }}
+              className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-white whitespace-nowrap shrink-0"
+            >
+              بوابة موظفي محطتي
+            </a>
+
+            <nav className="flex items-center gap-6 text-xs sm:text-sm font-semibold text-blue-100">
+              <button
+                type="button"
+                onClick={navigateToDriverApp}
+                className="hover:text-white transition-colors whitespace-nowrap shrink-0"
+              >
+                تطبيق السائق
+              </button>
+            </nav>
+
+            <div className="shrink-0">
+              {user ? (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold hover:bg-white/20 transition-colors whitespace-nowrap shrink-0"
+                >
+                  تسجيل الخروج
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-white text-[#0B1C3E] text-xs font-bold hover:bg-blue-50 transition-colors whitespace-nowrap shrink-0"
+                >
+                  دخول الموظف
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          {!authReady ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center text-sm text-slate-500">
+              جاري التحقق من صلاحيات الموظف...
+            </div>
+          ) : !user ? (
+            <div className="max-w-md mx-auto mt-10 bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-[#EEF4FF] text-[#132B5E] flex items-center justify-center mx-auto">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900">
+                بوابة إدارة محطة الوقود
+              </h1>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                هذه الصفحة مخصصة لموظفي المحطة فقط. يرجى تسجيل الدخول بحساب Google الإداري المعتمد.
+              </p>
+              <button
+                type="button"
+                onClick={handleSignIn}
+                className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#132B5E] text-white text-sm font-bold hover:bg-[#1D3E85] transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>تسجيل دخول موظف المحطة</span>
+              </button>
+            </div>
+          ) : !isAdmin ? (
+            <div className="max-w-md mx-auto mt-10 bg-white rounded-2xl border border-red-200 p-8 text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900">
+                غير مصرح بالوصول
+              </h1>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                الحساب الحالي ({user.email}) مسجل كحساب سائق ولا يملك صلاحية الوصول إلى لوحة تحكم الموظفين.
+              </p>
+              <button
+                type="button"
+                onClick={navigateToDriverApp}
+                className="w-full min-h-[44px] px-5 py-2.5 rounded-xl bg-[#132B5E] text-white text-sm font-bold hover:bg-[#1D3E85] transition-colors"
+              >
+                العودة إلى تطبيق السائق
+              </button>
+            </div>
+          ) : (
+            <StaffDashboard
+              stations={stations}
+              bookings={bookings}
+              user={user}
+              isAdmin={isAdmin}
+              hasFirestoreStations={firestoreStations.length > 0}
+              onSignIn={handleSignIn}
+              onSeedStations={seedStationsToFirestore}
+              onAdjustQueue={handleAdjustQueue}
+              onAdjustPumps={handleAdjustPumps}
+              onToggleStationOpen={handleToggleStationOpen}
+              onUpdateFuels={handleUpdateFuels}
+              onCallBookingToPump={handleCallBookingToPump}
+              onStaffUpdateBookingStatus={handleStaffUpdateBookingStatus}
+            />
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div dir="rtl" className="min-h-screen bg-[#F4F7FC] text-[#0F172A]">
-      {/* Strict 3-Zone Top Bar Contract */}
+      {/* Strict 3-Zone Top Bar Contract (Customer-facing only) */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
           {/* Zone 1: Single-line Brand Wordmark */}
@@ -607,8 +756,8 @@ export default function App() {
             محطتي
           </a>
 
-          {/* Zone 2: Clean Single-Line Nav Links */}
-          <nav className="flex items-center gap-4 sm:gap-7 text-xs sm:text-sm font-semibold text-slate-600 overflow-x-auto">
+          {/* Zone 2: Clean Single-Line Customer Nav Links */}
+          <nav className="flex items-center gap-6 sm:gap-8 text-xs sm:text-sm font-semibold text-slate-600 overflow-x-auto">
             <button
               type="button"
               onClick={() => setMode('driver')}
@@ -619,17 +768,6 @@ export default function App() {
               }`}
             >
               تطبيق السائق
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('staff')}
-              className={`py-1.5 border-b-2 transition-colors whitespace-nowrap shrink-0 ${
-                mode === 'staff'
-                  ? 'border-[#2563EB] text-[#132B5E]'
-                  : 'border-transparent hover:text-slate-900'
-              }`}
-            >
-              لوحة الموظف
             </button>
             <button
               type="button"
@@ -689,6 +827,7 @@ export default function App() {
           <DriverView
             stations={stations}
             user={user}
+            isAdmin={isAdmin}
             profile={profile}
             bookings={bookings}
             favoriteIds={favoriteIds}
@@ -697,6 +836,7 @@ export default function App() {
             onTabChange={setDriverTab}
             onSignIn={handleSignIn}
             onSignOut={handleSignOut}
+            onOpenStaffPortal={navigateToStaffPortal}
             onToggleFavorite={handleToggleFavorite}
             onCreateBooking={handleCreateBooking}
             onUpdateBookingStatus={handleDriverUpdateBookingStatus}
@@ -705,28 +845,21 @@ export default function App() {
           />
         )}
 
-        {mode === 'staff' && (
-          <StaffDashboard
-            stations={stations}
-            bookings={bookings}
-            user={user}
-            isAdmin={isAdmin}
-            hasFirestoreStations={firestoreStations.length > 0}
-            onSignIn={handleSignIn}
-            onSeedStations={seedStationsToFirestore}
-            onAdjustQueue={handleAdjustQueue}
-            onAdjustPumps={handleAdjustPumps}
-            onToggleStationOpen={handleToggleStationOpen}
-            onUpdateFuels={handleUpdateFuels}
-            onCallBookingToPump={handleCallBookingToPump}
-            onStaffUpdateBookingStatus={handleStaffUpdateBookingStatus}
-          />
-        )}
-
         {mode === 'display' && (
           <StationDisplay stations={stations} bookings={bookings} />
         )}
       </main>
+
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-24 md:pb-8 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-400">
+        <span>محطتي — نظام تنظيم طوابير محطات الوقود</span>
+        <button
+          type="button"
+          onClick={navigateToStaffPortal}
+          className="text-slate-500 hover:text-[#132B5E] underline underline-offset-4 transition-colors"
+        >
+          بوابة الموظفين
+        </button>
+      </footer>
     </div>
   );
 }
