@@ -32,10 +32,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isVerified() && (
-        request.auth.token.email == 'haiyamkhalid@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Entity validation blueprints
@@ -107,6 +104,15 @@ service cloud.firestore {
         && data.role == 'driver'
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'staffCode', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'staffCode', 'createdAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.staffCode is string && data.staffCode.size() == 5 && data.staffCode == '55555'
+        && data.createdAt is timestamp;
     }
 
     function isValidFavorite(data) {
@@ -297,10 +303,18 @@ service cloud.firestore {
       allow delete: if isValidId(bookingId) && isAdmin();
     }
 
-    // Trusted staff administrators
+    // Trusted staff administrators (unlocked with verified staff code)
     match /admins/{userId} {
       allow get: if isValidId(userId) && isSignedIn() && (isOwner(userId) || isAdmin());
-      allow list, create, update, delete: if false;
+      allow create: if isValidId(userId)
+        && isVerified()
+        && isOwner(userId)
+        && isValidAdminUser(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().email == request.auth.token.email
+        && incoming().staffCode == '55555'
+        && incoming().createdAt == request.time;
+      allow list, update, delete: if false;
     }
   }
 }

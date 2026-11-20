@@ -381,7 +381,7 @@
     },
     "AdminUser": {
       "title": "AdminUser",
-      "description": "Trusted station staff administrator record.",
+      "description": "Trusted station staff administrator record verified by staff code.",
       "type": "object",
       "properties": {
         "uid": {
@@ -395,13 +395,19 @@
           "maxLength": 150,
           "description": "Admin email"
         },
+        "staffCode": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 10,
+          "description": "Verified station staff activation code"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
           "description": "Creation timestamp"
         }
       },
-      "required": ["uid", "email", "createdAt"]
+      "required": ["uid", "email", "staffCode", "createdAt"]
     }
   },
   "firestore": {
