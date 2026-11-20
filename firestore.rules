@@ -1,0 +1,306 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'haiyamkhalid@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Entity validation blueprints
+    function isValidFuelGrade(entry) {
+      return entry is map
+        && entry.keys().hasAll(['available', 'priceIqd'])
+        && entry.keys().hasOnly(['available', 'priceIqd'])
+        && entry.available is bool
+        && entry.priceIqd is int
+        && entry.priceIqd >= 0
+        && entry.priceIqd <= 50000;
+    }
+
+    function isValidStation(data) {
+      return data.keys().hasAll([
+          'id', 'nameAr', 'nameEn', 'districtAr', 'type', 'imageKey',
+          'mapX', 'mapY', 'distanceKm', 'rating', 'hoursAr', 'contactPhone',
+          'queueCount', 'activePumps', 'waitMinutes', 'servedToday',
+          'congestion', 'isOpen', 'fuels', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'nameAr', 'nameEn', 'districtAr', 'type', 'imageKey',
+          'mapX', 'mapY', 'distanceKm', 'rating', 'hoursAr', 'contactPhone',
+          'queueCount', 'activePumps', 'waitMinutes', 'servedToday',
+          'congestion', 'isOpen', 'fuels', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id.size() >= 2 && data.id.size() <= 64
+        && data.nameAr is string && data.nameAr.size() >= 2 && data.nameAr.size() <= 100
+        && data.nameEn is string && data.nameEn.size() >= 2 && data.nameEn.size() <= 100
+        && data.districtAr is string && data.districtAr.size() >= 2 && data.districtAr.size() <= 80
+        && data.type in ['government', 'private']
+        && data.imageKey in ['central', 'university', 'nozzle']
+        && data.mapX is number && data.mapX >= 0 && data.mapX <= 100
+        && data.mapY is number && data.mapY >= 0 && data.mapY <= 100
+        && data.distanceKm is number && data.distanceKm >= 0 && data.distanceKm <= 200
+        && data.rating is number && data.rating >= 0 && data.rating <= 5
+        && data.hoursAr is string && data.hoursAr.size() >= 2 && data.hoursAr.size() <= 80
+        && data.contactPhone is string && data.contactPhone.size() >= 5 && data.contactPhone.size() <= 30
+        && data.queueCount is int && data.queueCount >= 0 && data.queueCount <= 500
+        && data.activePumps is int && data.activePumps >= 1 && data.activePumps <= 24
+        && data.waitMinutes is int && data.waitMinutes >= 0 && data.waitMinutes <= 600
+        && data.servedToday is int && data.servedToday >= 0 && data.servedToday <= 10000
+        && data.congestion in ['light', 'moderate', 'crowded']
+        && data.isOpen is bool
+        && data.fuels is map
+        && data.fuels.keys().hasAll(['b91', 'b95', 'b98'])
+        && data.fuels.keys().hasOnly(['b91', 'b95', 'b98'])
+        && isValidFuelGrade(data.fuels.b91)
+        && isValidFuelGrade(data.fuels.b95)
+        && isValidFuelGrade(data.fuels.b98)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'email', 'phone', 'vehiclePlate',
+          'preferredFuel', 'role', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'phone', 'vehiclePlate',
+          'preferredFuel', 'role', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.phone is string && data.phone.size() <= 30
+        && data.vehiclePlate is string && data.vehiclePlate.size() <= 30
+        && data.preferredFuel in ['b91', 'b95', 'b98']
+        && data.role == 'driver'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFavorite(data) {
+      return data.keys().hasAll(['userId', 'stationId', 'stationNameAr', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'stationId', 'stationNameAr', 'createdAt'])
+        && isValidId(data.userId)
+        && isValidId(data.stationId) && data.stationId.size() <= 64
+        && data.stationNameAr is string && data.stationNameAr.size() >= 2 && data.stationNameAr.size() <= 100
+        && data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+          'userId', 'stationId', 'titleAr', 'messageAr', 'kind', 'pumpNumber', 'isRead', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'stationId', 'titleAr', 'messageAr', 'kind', 'pumpNumber', 'isRead', 'createdAt'
+        ])
+        && isValidId(data.userId)
+        && isValidId(data.stationId) && data.stationId.size() <= 64
+        && data.titleAr is string && data.titleAr.size() >= 2 && data.titleAr.size() <= 120
+        && data.messageAr is string && data.messageAr.size() >= 2 && data.messageAr.size() <= 300
+        && data.kind in ['queue_called', 'queue_update', 'booking_confirmed', 'congestion_alert']
+        && data.pumpNumber is int && data.pumpNumber >= 0 && data.pumpNumber <= 24
+        && data.isRead is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'userId', 'driverName', 'driverPhone', 'stationId', 'stationNameAr',
+          'ticketNumber', 'fuelType', 'slotDate', 'slotTime', 'status',
+          'pumpNumber', 'estimatedWaitMinutes', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'driverName', 'driverPhone', 'stationId', 'stationNameAr',
+          'ticketNumber', 'fuelType', 'slotDate', 'slotTime', 'status',
+          'pumpNumber', 'estimatedWaitMinutes', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 100
+        && data.driverPhone is string && data.driverPhone.size() <= 30
+        && isValidId(data.stationId) && data.stationId.size() <= 64
+        && data.stationNameAr is string && data.stationNameAr.size() >= 2 && data.stationNameAr.size() <= 100
+        && data.ticketNumber is string && data.ticketNumber.size() >= 5 && data.ticketNumber.size() <= 10
+        && data.ticketNumber.matches('^#[0-9]{4,6}$')
+        && data.fuelType in ['b91', 'b95', 'b98']
+        && data.slotDate is string && data.slotDate.size() >= 4 && data.slotDate.size() <= 20
+        && data.slotTime is string && data.slotTime.size() >= 2 && data.slotTime.size() <= 20
+        && data.status in ['waiting', 'called', 'completed', 'cancelled']
+        && data.pumpNumber is int && data.pumpNumber >= 0 && data.pumpNumber <= 24
+        && data.estimatedWaitMinutes is int && data.estimatedWaitMinutes >= 0 && data.estimatedWaitMinutes <= 600
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Public non-PII fuel station status & queue telemetry
+    match /stations/{stationId} {
+      allow get: if isValidId(stationId);
+      allow list: if resource.data.isOpen is bool;
+      allow create: if isValidId(stationId)
+        && isAdmin()
+        && isValidStation(incoming())
+        && incoming().id == stationId
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(stationId)
+        && isAdmin()
+        && isValidStation(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'queueCount', 'activePumps', 'waitMinutes', 'servedToday',
+          'congestion', 'isOpen', 'fuels', 'hoursAr', 'updatedAt'
+        ]);
+      allow delete: if isValidId(stationId) && isAdmin();
+    }
+
+    // Driver profiles (strict PII isolation)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isVerified()
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().role == 'driver'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'phone', 'vehiclePlate', 'preferredFuel', 'updatedAt'
+          ])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Driver favorite stations
+      match /favorites/{stationId} {
+        allow get: if isValidId(userId) && isValidId(stationId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(stationId)
+          && isVerified()
+          && isOwner(userId)
+          && isValidFavorite(incoming())
+          && incoming().userId == request.auth.uid
+          && incoming().stationId == stationId
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/stations/$(stationId));
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(stationId) && isVerified() && isOwner(userId);
+      }
+
+      // Driver notifications
+      match /notifications/{notificationId} {
+        allow get: if isValidId(userId) && isValidId(notificationId) && (isOwner(userId) || isAdmin());
+        allow list: if (isOwner(userId) && resource.data.userId == request.auth.uid) || isAdmin();
+        allow create: if isValidId(userId) && isValidId(notificationId)
+          && isVerified()
+          && (isOwner(userId) || isAdmin())
+          && isValidNotification(incoming())
+          && incoming().userId == userId
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/stations/$(incoming().stationId));
+        allow update: if isValidId(userId) && isValidId(notificationId)
+          && isVerified()
+          && isOwner(userId)
+          && isValidNotification(incoming())
+          && incoming().userId == existing().userId
+          && incoming().stationId == existing().stationId
+          && incoming().titleAr == existing().titleAr
+          && incoming().messageAr == existing().messageAr
+          && incoming().kind == existing().kind
+          && incoming().pumpNumber == existing().pumpNumber
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+        allow delete: if isValidId(userId) && isValidId(notificationId) && isVerified() && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // Queue bookings
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(bookingId)
+        && isVerified()
+        && isValidBooking(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'waiting'
+        && incoming().pumpNumber == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/stations/$(incoming().stationId));
+      allow update: if isValidId(bookingId)
+        && isVerified()
+        && isValidBooking(incoming())
+        && incoming().userId == existing().userId
+        && incoming().stationId == existing().stationId
+        && incoming().ticketNumber == existing().ticketNumber
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'pumpNumber', 'estimatedWaitMinutes', 'updatedAt'
+          ])) ||
+          (
+            existing().userId == request.auth.uid
+            && existing().status in ['waiting', 'called']
+            && incoming().status in ['completed', 'cancelled']
+            && incoming().driverName == existing().driverName
+            && incoming().driverPhone == existing().driverPhone
+            && incoming().stationNameAr == existing().stationNameAr
+            && incoming().fuelType == existing().fuelType
+            && incoming().slotDate == existing().slotDate
+            && incoming().slotTime == existing().slotTime
+            && incoming().pumpNumber == existing().pumpNumber
+            && incoming().estimatedWaitMinutes == existing().estimatedWaitMinutes
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(bookingId) && isAdmin();
+    }
+
+    // Trusted staff administrators
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+  }
+}

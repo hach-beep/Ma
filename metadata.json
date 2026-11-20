@@ -1,0 +1,6 @@
+{
+  "name": "محطتي — Mahattati",
+  "description": "تطبيق ذكي لتنظيم طوابير محطات الوقود في كركوك ومعرفة وقت الانتظار وحجز الدور إلكترونياً مع لوحة موظف وشاشة عرض لحظية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

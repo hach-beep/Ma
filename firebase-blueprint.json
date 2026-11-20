@@ -1,0 +1,433 @@
+{
+  "entities": {
+    "Station": {
+      "title": "Station",
+      "description": "Fuel station state including queue length, active pumps, wait time, and fuel prices.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 2,
+          "maxLength": 64,
+          "description": "Unique station identifier"
+        },
+        "nameAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Arabic station name"
+        },
+        "nameEn": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "English station name"
+        },
+        "districtAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "District or neighborhood in Arabic"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["government", "private"],
+          "description": "Station ownership category"
+        },
+        "imageKey": {
+          "type": "string",
+          "enum": ["central", "university", "nozzle"],
+          "description": "Visual asset key for the station"
+        },
+        "mapX": {
+          "type": "number",
+          "description": "Horizontal map coordinate percentage (0-100)"
+        },
+        "mapY": {
+          "type": "number",
+          "description": "Vertical map coordinate percentage (0-100)"
+        },
+        "distanceKm": {
+          "type": "number",
+          "description": "Approximate distance in kilometers from Kirkuk center"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Station rating out of 5"
+        },
+        "hoursAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Operating hours description in Arabic"
+        },
+        "contactPhone": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 30,
+          "description": "Station contact phone number"
+        },
+        "queueCount": {
+          "type": "integer",
+          "description": "Current number of cars in queue"
+        },
+        "activePumps": {
+          "type": "integer",
+          "description": "Number of active refueling pumps"
+        },
+        "waitMinutes": {
+          "type": "integer",
+          "description": "Estimated wait time in minutes"
+        },
+        "servedToday": {
+          "type": "integer",
+          "description": "Number of vehicles served today"
+        },
+        "congestion": {
+          "type": "string",
+          "enum": ["light", "moderate", "crowded"],
+          "description": "Current queue congestion state"
+        },
+        "isOpen": {
+          "type": "boolean",
+          "description": "Whether the station is currently open"
+        },
+        "fuels": {
+          "type": "object",
+          "description": "Availability and IQD price per liter for b91, b95, and b98"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last server update timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "nameAr",
+        "nameEn",
+        "districtAr",
+        "type",
+        "imageKey",
+        "mapX",
+        "mapY",
+        "distanceKm",
+        "rating",
+        "hoursAr",
+        "contactPhone",
+        "queueCount",
+        "activePumps",
+        "waitMinutes",
+        "servedToday",
+        "congestion",
+        "isOpen",
+        "fuels",
+        "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated driver profile and vehicle preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Firebase Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Driver full name"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Verified account email"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Driver phone number"
+        },
+        "vehiclePlate": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Vehicle license plate"
+        },
+        "preferredFuel": {
+          "type": "string",
+          "enum": ["b91", "b95", "b98"],
+          "description": "Default fuel grade preference"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["driver"],
+          "description": "Immutable client-side role"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile last update timestamp"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "phone",
+        "vehiclePlate",
+        "preferredFuel",
+        "role",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FavoriteStation": {
+      "title": "FavoriteStation",
+      "description": "A driver's saved favorite fuel station.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Owner Firebase Auth UID"
+        },
+        "stationId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64,
+          "description": "Referenced station ID"
+        },
+        "stationNameAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Cached Arabic station name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Bookmark creation timestamp"
+        }
+      },
+      "required": ["userId", "stationId", "stationNameAr", "createdAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "In-app notification delivered to a driver about queue turns or station alerts.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Recipient Firebase Auth UID"
+        },
+        "stationId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64,
+          "description": "Related station ID"
+        },
+        "titleAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Notification title in Arabic"
+        },
+        "messageAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 300,
+          "description": "Notification body in Arabic"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["queue_called", "queue_update", "booking_confirmed", "congestion_alert"],
+          "description": "Notification category"
+        },
+        "pumpNumber": {
+          "type": "integer",
+          "description": "Assigned pump number if applicable"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Whether the driver has read the alert"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Notification creation timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "stationId",
+        "titleAr",
+        "messageAr",
+        "kind",
+        "pumpNumber",
+        "isRead",
+        "createdAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Electronic fuel station queue reservation.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Driver Firebase Auth UID"
+        },
+        "driverName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Driver display name"
+        },
+        "driverPhone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Driver contact phone"
+        },
+        "stationId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64,
+          "description": "Target station ID"
+        },
+        "stationNameAr": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Arabic name of the target station"
+        },
+        "ticketNumber": {
+          "type": "string",
+          "pattern": "^#[0-9]{4,6}$",
+          "maxLength": 10,
+          "description": "Sequential ticket code such as #1247"
+        },
+        "fuelType": {
+          "type": "string",
+          "enum": ["b91", "b95", "b98"],
+          "description": "Selected fuel grade"
+        },
+        "slotDate": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 20,
+          "description": "Reservation date YYYY-MM-DD"
+        },
+        "slotTime": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20,
+          "description": "Selected slot time or instant"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "called", "completed", "cancelled"],
+          "description": "Current booking lifecycle status"
+        },
+        "pumpNumber": {
+          "type": "integer",
+          "description": "Assigned pump number (0 if unassigned)"
+        },
+        "estimatedWaitMinutes": {
+          "type": "integer",
+          "description": "Wait estimate at booking time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Booking creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Booking last update timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "driverName",
+        "driverPhone",
+        "stationId",
+        "stationNameAr",
+        "ticketNumber",
+        "fuelType",
+        "slotDate",
+        "slotTime",
+        "status",
+        "pumpNumber",
+        "estimatedWaitMinutes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Trusted station staff administrator record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Admin Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Admin email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/stations/{stationId}": {
+      "schema": { "$ref": "#/entities/Station" },
+      "description": "Publicly readable fuel station telemetry and pricing; writable only by station admins."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private driver profile and preferences, readable and writable only by the profile owner or admin."
+    },
+    "/users/{userId}/favorites/{stationId}": {
+      "schema": { "$ref": "#/entities/FavoriteStation" },
+      "description": "Driver favorite fuel stations subcollection."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationItem" },
+      "description": "Driver notifications subcollection."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Queue reservations for fuel stations."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Read-only admin registry managed out-of-band or by super-admin."
+    }
+  }
+}
